@@ -18,6 +18,7 @@ HAND_CONNECTIONS = (
 # I font Hershey di OpenCV non hanno lettere accentate.
 MODE_LABELS = {"tv": "TV", "nav": "Navigazione"}
 LINE_HEIGHT = 22
+PANEL_ALPHA = 0.55
 
 
 def draw(
@@ -43,7 +44,9 @@ def draw(
         f"Ultimo tasto: {last_key or '-'}",
         f"TV: {tv_status}",
     ]
-    cv2.rectangle(frame, (0, 0), (width, LINE_HEIGHT * len(lines) + 10), (0, 0, 0), -1)
+    # Fondo semitrasparente: la mano alzata resta visibile sotto il testo.
+    panel = frame[: LINE_HEIGHT * len(lines) + 10]
+    cv2.addWeighted(panel, 1 - PANEL_ALPHA, np.zeros_like(panel), PANEL_ALPHA, 0, dst=panel)
     for i, text in enumerate(lines):
         cv2.putText(frame, text, (10, 24 + LINE_HEIGHT * i), cv2.FONT_HERSHEY_SIMPLEX,
                     0.6, (255, 255, 255), 1, cv2.LINE_AA)
