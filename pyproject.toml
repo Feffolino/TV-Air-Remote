@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tv-air-remote"
+version = "0.1.0"
+description = "Controllo di una Smart TV Samsung con le gesture delle mani"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mediapipe>=0.10.14",
+    "opencv-contrib-python>=4.9",
+    "samsungtvws>=2.6",
+    "wakeonlan>=3.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools]
+packages = ["tv_air_remote"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
