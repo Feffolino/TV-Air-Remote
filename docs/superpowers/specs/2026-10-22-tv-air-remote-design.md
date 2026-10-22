@@ -96,7 +96,7 @@ Ritorno automatico alla modalità TV dopo 8 s senza comandi inviati.
   quasi ferma (spostamento del polso < 3% del frame) per almeno 0,3 s, e poi
   il polso si sposta di oltre il 25% della dimensione del frame entro 0,4 s.
   La direzione è l'asse con lo spostamento maggiore.
-- **Una mano:** se ci sono più mani si usa quella con confidenza più alta.
+- **Una mano:** MediaPipe traccia una sola mano (`num_hands=1`).
 - **Perdita della mano:** dopo 300 ms senza mano l'interprete azzera hold,
   ripetizioni e armamento dello swipe.
 
@@ -129,7 +129,9 @@ restituisce `(frame, t_ms)` con timestamp monotono.
 
 ### 4.3 `recognizer.py`
 
-Wrapper di MediaPipe `GestureRecognizer` in modalità `VIDEO`, `num_hands=2`.
+Wrapper di MediaPipe `GestureRecognizer` in modalità `VIDEO`, `num_hands=1`
+(una sola mano tracciata in modo continuo: con due mani il polso potrebbe
+saltare da una mano all'altra e generare swipe falsi).
 Per ogni frame restituisce `HandObservation(gesture, score, wrist_xy,
 landmarks, t_ms)` per la mano migliore, oppure `None`. `wrist_xy` è
 normalizzato in [0, 1]. Se il modello `gesture_recognizer.task` manca in
@@ -214,5 +216,6 @@ Framework: `pytest`.
 
 ## 7. Dipendenze
 
-Python 3.11 o 3.12. Runtime: `mediapipe`, `opencv-python`, `samsungtvws`,
+Python 3.11 o 3.12. Runtime: `mediapipe`, `opencv-contrib-python` (già richiesto
+da mediapipe; non installare anche `opencv-python`), `samsungtvws`, `wakeonlan`,
 `pyyaml`. Sviluppo: `pytest`.
