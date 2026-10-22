@@ -1,0 +1,59 @@
+# Copia questo file in config.yaml e modifica almeno tv.host.
+
+tv:
+  host: 192.168.1.50          # IP della TV (Impostazioni > Generale > Rete > Stato rete)
+  port: 8002                  # 8002 = WebSocket sicuro (TV dal 2016 in poi)
+  # mac: "aa:bb:cc:dd:ee:ff"  # per accendere la TV con Wake-on-LAN
+  token_file: .tv_token       # creato al primo collegamento autorizzato
+  name: TV Air Remote         # nome mostrato sulla TV
+
+camera:
+  index: 0
+  width: 640
+  height: 480
+  fps: 30
+
+# Valori predefiniti: cambiali solo se serve.
+thresholds:
+  min_score: 0.7          # confidenza minima della gesture
+  stable_frames: 5        # frame consecutivi per confermare una gesture
+  cooldown_ms: 800        # pausa dopo un comando singolo
+  swipe_cooldown_ms: 500  # pausa dopo uno swipe
+  repeat_ms: 300          # ripetizione del volume
+  fast_repeat_ms: 150     # ripetizione veloce del volume
+  fast_after_ms: 1500     # dopo quanto il volume accelera
+  hand_lost_ms: 300       # mano assente oltre questo tempo = reset
+  nav_timeout_ms: 8000    # ritorno automatico alla modalità TV
+  swipe_arm_ms: 300       # palmo fermo prima di uno swipe
+  swipe_still_dist: 0.03  # "fermo" = polso entro il 3% del frame
+  swipe_min_dist: 0.25    # swipe = spostamento oltre il 25% del frame...
+  swipe_max_ms: 400       # ...entro questo tempo
+  repeat_gestures: [Thumb_Up, Thumb_Down]
+  hold_ms:
+    Pointing_Up: 1000
+    ILoveYou: 1500
+
+# Gesture: Thumb_Up, Thumb_Down, Victory, Pointing_Up, ILoveYou, Closed_Fist,
+# Open_Palm, SWIPE_UP, SWIPE_DOWN, SWIPE_LEFT, SWIPE_RIGHT.
+# Valore: un tasto Samsung (KEY_...), PLAY_PAUSE, oppure {key: ..., switch_to: tv|nav}.
+# Una modalità scritta qui sostituisce per intero quella predefinita.
+mapping:
+  tv:
+    SWIPE_UP: KEY_CHUP
+    SWIPE_DOWN: KEY_CHDOWN
+    Thumb_Up: KEY_VOLUP
+    Thumb_Down: KEY_VOLDOWN
+    Victory: PLAY_PAUSE
+    Pointing_Up: {key: KEY_HOME, switch_to: nav}
+    ILoveYou: KEY_POWER
+  nav:
+    SWIPE_UP: KEY_UP
+    SWIPE_DOWN: KEY_DOWN
+    SWIPE_LEFT: KEY_LEFT
+    SWIPE_RIGHT: KEY_RIGHT
+    Closed_Fist: KEY_ENTER
+    Victory: KEY_RETURN
+    Thumb_Up: KEY_VOLUP
+    Thumb_Down: KEY_VOLDOWN
+    Pointing_Up: {key: KEY_EXIT, switch_to: tv}
+    ILoveYou: KEY_POWER
