@@ -228,3 +228,7 @@ from outside, so they are tested without a webcam or a TV.
 
 To add a language, add a block to `TEXTS` in `tv_air_remote/i18n.py` with the
 same keys as `en`; a test checks that no text is missing.
+
+## License
+
+[MIT](LICENSE) © 2026 Stefano Manca
