@@ -1,4 +1,4 @@
-"""Caricamento e validazione della configurazione."""
+"""Configuration loading and validation."""
 
 from __future__ import annotations
 
@@ -18,15 +18,15 @@ GESTURES = (
     "ILoveYou",
     "Closed_Fist",
     "Open_Palm",
-    "Thumb_Left",  # pollice verso sinistra, riconosciuto dalla forma della mano
+    "Thumb_Left",  # thumb pointing left, recognised from the hand shape
 )
-# Palmo aperto spostato dal centro (joystick).
+# Open palm moved away from the centre (joystick).
 PALM_MOVES = ("PALM_UP", "PALM_DOWN", "PALM_LEFT", "PALM_RIGHT")
-# Palmo chiuso e riaperto in fretta.
+# Palm closed and quickly reopened.
 PALM_TRIGGERS = (*PALM_MOVES, "PALM_CLICK")
 MODES = ("tv", "nav")
 
-# Azione speciale: alterna KEY_PAUSE e KEY_PLAY.
+# Special action: alternates KEY_PAUSE and KEY_PLAY.
 PLAY_PAUSE = "PLAY_PAUSE"
 
 VALID_KEYS = frozenset({
@@ -41,7 +41,7 @@ VALID_KEYS = frozenset({
 
 
 class ConfigError(ValueError):
-    """Configurazione non valida."""
+    """Invalid configuration."""
 
 
 @dataclass(frozen=True)
@@ -138,7 +138,7 @@ class Config:
 
 
 def load_config(path: str | Path) -> Config:
-    """Legge e valida il file YAML di configurazione."""
+    """Read and validate the YAML configuration file."""
     path = Path(path)
     if not path.exists():
         raise ConfigError(
@@ -151,7 +151,7 @@ def load_config(path: str | Path) -> Config:
 
 
 def parse_config(data: Any, require_host: bool = True) -> Config:
-    """Valida una configurazione già letta. Le sezioni assenti usano i default."""
+    """Validate an already-loaded configuration. Missing sections use the defaults."""
     if not isinstance(data, dict):
         raise ConfigError("The configuration must be a YAML mapping")
 

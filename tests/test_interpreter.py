@@ -4,7 +4,7 @@ from tv_air_remote.interpreter import GestureInterpreter
 from tv_air_remote.observation import HandObservation
 
 CENTER = (0.5, 0.5)
-OTHER = (0.2, 0.5)  # seconda mano, ferma, per la modalità Navigazione
+OTHER = (0.2, 0.5)  # second hand, still, for Navigation mode
 
 
 def make(mapping=None, **thresholds):
@@ -19,7 +19,7 @@ def obs(gesture, t, wrist=CENTER, score=0.9, landmarks=()):
 
 
 def run(interp, frames):
-    """frames: (t_ms, [HandObservation, ...]). Restituisce [(t_ms, tasto)]."""
+    """frames: (t_ms, [HandObservation, ...]). Returns [(t_ms, key)]."""
     sent = []
     for t, hands in frames:
         sent += [(t, key) for key in interp.update(hands, t)]
@@ -27,7 +27,7 @@ def run(interp, frames):
 
 
 def hold(gesture, t0, t1, step=33, wrist=CENTER, score=0.9, second=None, other=OTHER):
-    """Una mano con la gesture; ``second``: gesture di una seconda mano in ``other``."""
+    """One hand with the gesture; ``second``: gesture of a second hand at ``other``."""
     frames = []
     for t in range(t0, t1 + 1, step):
         hands = [obs(gesture, t, wrist, score)]
@@ -46,7 +46,7 @@ def keys(sent):
 
 
 def palm_to(t0, target, second=None, center=CENTER, until=None, other=OTHER):
-    """Palmo fermo al centro per 400 ms, poi spostato su target fino a until."""
+    """Palm still at the centre for 400 ms, then moved to target until ``until``."""
     frames = hold("Open_Palm", t0, t0 + 400, wrist=center, second=second, other=other)
     frames += hold("Open_Palm", t0 + 433, until or t0 + 433, wrist=target, second=second, other=other)
     return frames
@@ -62,7 +62,7 @@ def enter_nav(interp, t0=0):
     assert interp.mode == "nav"
 
 
-# --- gesture statiche -------------------------------------------------------
+# --- static gestures --------------------------------------------------------
 
 def test_gesture_needs_five_stable_frames():
     assert run(make(), hold("Thumb_Up", 0, 99)) == []
@@ -74,7 +74,7 @@ def test_low_confidence_is_ignored():
 
 
 def test_victory_is_not_play_pause_by_default():
-    # MediaPipe la riconosce poco: in modalità TV pausa/play è il clic (OK).
+    # MediaPipe rarely recognises it: in TV mode pause/play is the click (OK).
     assert run(make(), hold("Victory", 0, 1500)) == []
 
 
@@ -89,7 +89,7 @@ def test_single_command_while_held():
 
 
 def test_brief_label_loss_does_not_repeat_command():
-    # Il pugno tenuto chiuso: MediaPipe perde l'etichetta per 200 ms, poi torna.
+    # Fist held closed: MediaPipe loses the label for 200 ms, then it comes back.
     frames = (hold("Closed_Fist", 0, 1200) + hold(None, 1233, 1400, score=0.2)
               + hold("Closed_Fist", 1433, 3000))
     assert keys(run(make(), frames)) == ["KEY_HOME"]
@@ -127,22 +127,22 @@ def test_open_palm_alone_does_nothing():
     assert run(make(), hold("Open_Palm", 0, 3000)) == []
 
 
-# --- modalità per numero di mani -------------------------------------------
+# --- mode by number of hands ------------------------------------------------
 
 def test_two_hands_switch_to_navigation_and_back():
     interp = make()
     run(interp, hold("Closed_Fist", 0, 300, second="Closed_Fist", score=0.3))
-    assert interp.mode == "tv"  # serve nav_enter_ms di conteggio stabile
+    assert interp.mode == "tv"  # needs nav_enter_ms of stable hand count
     run(interp, hold("Closed_Fist", 333, 500, second="Closed_Fist", score=0.3))
     assert interp.mode == "nav"
     run(interp, hold("Closed_Fist", 533, 1900, score=0.3))
-    assert interp.mode == "nav"  # per uscire serve nav_exit_ms con una mano
+    assert interp.mode == "nav"  # leaving needs nav_exit_ms with one hand
     run(interp, hold("Closed_Fist", 1933, 2100, score=0.3))
     assert interp.mode == "tv"
 
 
 def test_second_hand_lost_for_a_second_keeps_navigation():
-    # MediaPipe perde spesso una delle due mani per qualche centinaio di ms.
+    # MediaPipe often loses one of the two hands for a few hundred ms.
     interp = make()
     enter_nav(interp)
     run(interp, hold("Closed_Fist", 533, 1500, score=0.3))
@@ -174,10 +174,10 @@ def test_thumb_up_enter_does_not_repeat():
     assert keys(run(interp, hold("Thumb_Up", 600, 3000, step=10, second="Pointing_Up"))) == ["KEY_ENTER"]
 
 
-# --- palmo come joystick ----------------------------------------------------
+# --- palm as joystick -------------------------------------------------------
 
 def test_palm_in_tv_mode_volume_and_channel():
-    # Su/giù = volume, sinistra/destra = canale.
+    # Up/down = volume, left/right = channel.
     assert keys(run(make(), palm_to(0, (0.5, 0.3)))) == ["KEY_VOLUP"]
     assert keys(run(make(), palm_to(0, (0.5, 0.7)))) == ["KEY_VOLDOWN"]
     assert keys(run(make(), palm_to(0, (0.7, 0.5)))) == ["KEY_CHUP"]
@@ -190,8 +190,8 @@ def test_palm_held_up_keeps_raising_volume():
 
 
 def test_palm_arrows_in_navigation():
-    # L'altra mano sta dal lato opposto alla direzione: la mano che si muove
-    # è quella che può spingere verso quel lato.
+    # The other hand is on the side opposite the direction: the moving hand
+    # is the one that can push towards that side.
     for target, key, other in (((0.5, 0.3), "KEY_UP", OTHER), ((0.5, 0.7), "KEY_DOWN", OTHER),
                                ((0.3, 0.5), "KEY_LEFT", (0.8, 0.5)), ((0.7, 0.5), "KEY_RIGHT", OTHER)):
         interp = make()
@@ -207,7 +207,7 @@ def test_palm_held_repeats_arrow():
 
 
 def test_palm_shape_without_label_drives_joystick():
-    # MediaPipe a volte classifica il palmo aperto come "nessuna gesture".
+    # MediaPipe sometimes classifies the open palm as "no gesture".
     interp = make()
     frames = []
     for t, wrist in [(t, CENTER) for t in range(0, 401, 33)] + [(433, (0.5, 0.3))]:
@@ -217,18 +217,18 @@ def test_palm_shape_without_label_drives_joystick():
 
 def test_mode_switch_keeps_center_but_waits_for_idle():
     interp = make()
-    run(interp, palm_to(0, (0.5, 0.3)))  # volume + in modalità TV, palmo ancora su
+    run(interp, palm_to(0, (0.5, 0.3)))  # volume + in TV mode, palm still up
     run(interp, hold("Open_Palm", 466, 1000, wrist=(0.5, 0.3), second="Pointing_Up"))
     assert interp.mode == "nav"
-    # Il palmo era già spostato: nessuna freccia finché non torna al centro...
+    # The palm was already moved: no arrow until it returns to the centre...
     assert run(interp, hold("Open_Palm", 1033, 1500, wrist=(0.5, 0.3), second="Pointing_Up")) == []
-    # ...poi il joystick riprende subito, senza dover fissare un nuovo centro.
+    # ...then the joystick resumes at once, without having to set a new centre.
     frames = hold("Open_Palm", 1533, 1700, second="Pointing_Up")
     frames += hold("Open_Palm", 1733, 1800, wrist=(0.7, 0.5), second="Pointing_Up")
     assert keys(run(interp, frames)) == ["KEY_RIGHT"]
 
 
-# --- due mani divise in Navigazione ----------------------------------------
+# --- two hands split in Navigation -----------------------------------------
 
 def test_left_hand_goes_left_right_hand_goes_right():
     interp = make(palm_smoothing=1.0)
@@ -241,7 +241,7 @@ def test_left_hand_goes_left_right_hand_goes_right():
 
 
 def test_inward_movement_is_ignored():
-    # La mano sinistra verso destra e la destra verso sinistra: nessun comando.
+    # Left hand moving right and right hand moving left: no command.
     interp = make(palm_smoothing=1.0)
     run(interp, two_palms(0, 800))
     assert run(interp, two_palms(833, 2000, left=(0.4, 0.5), right=(0.6, 0.5))) == []
@@ -253,13 +253,13 @@ def test_up_with_both_hands_sends_once():
     sent = run(interp, two_palms(833, 3000, step=10, left=(0.3, 0.35), right=(0.7, 0.35)))
     times = [t for t, _ in sent]
     assert set(keys(sent)) == {"KEY_UP"}
-    assert len(set(times)) == len(times)  # mai due tasti nello stesso frame
-    assert all(b - a >= 370 for a, b in zip(times, times[1:]))  # ritmo di una mano sola
+    assert len(set(times)) == len(times)  # never two keys in the same frame
+    assert all(b - a >= 370 for a, b in zip(times, times[1:]))  # single-hand pace
 
 
 def test_single_hand_in_navigation_does_every_direction():
-    # MediaPipe perde una mano: per nav_exit_ms si resta in Navigazione e la
-    # mano rimasta fa anche la direzione che di solito spetta all'altra.
+    # MediaPipe loses a hand: for nav_exit_ms it stays in Navigation and the
+    # remaining hand also does the direction that usually belongs to the other.
     interp = make(palm_smoothing=1.0)
     run(interp, two_palms(0, 800))
     run(interp, hold("Open_Palm", 833, 1300, wrist=(0.7, 0.5)))
@@ -267,10 +267,10 @@ def test_single_hand_in_navigation_does_every_direction():
     assert keys(run(interp, hold("Open_Palm", 1333, 1333, wrist=(0.6, 0.5)))) == ["KEY_LEFT"]
 
 
-# --- clic: chiudi e riapri la mano = OK -------------------------------------
+# --- click: close and reopen the hand = OK ----------------------------------
 
 def click(t0, wrist=CENTER, fist_frames=3, other=None):
-    """Palmo, pugno per fist_frames frame, di nuovo palmo."""
+    """Palm, fist for fist_frames frames, palm again."""
     frames = []
     for i, gesture in enumerate(["Open_Palm"] + ["Closed_Fist"] * fist_frames + ["Open_Palm"] * 2):
         t = t0 + 33 * i
@@ -314,12 +314,12 @@ def test_click_keeps_joystick_center():
     assert keys(run(interp, hold("Open_Palm", 700, 700, wrist=(0.7, 0.5)))) == ["KEY_CHUP"]
 
 
-# --- passaggio da una mano all'altra ---------------------------------------
+# --- switching from one hand to the other ----------------------------------
 
 def test_hand_lost_briefly_keeps_its_center():
     interp = make(palm_smoothing=1.0)
     run(interp, two_palms(0, 800))
-    # La webcam perde la mano sinistra per 600 ms, poi la ritrova dov'era.
+    # The webcam loses the left hand for 600 ms, then finds it where it was.
     run(interp, hold("Open_Palm", 833, 1433, wrist=(0.7, 0.5)))
     sent = run(interp, two_palms(1466, 1500))
     sent += run(interp, two_palms(1533, 1533, left=(0.2, 0.5)))
@@ -330,18 +330,18 @@ def test_returning_hand_off_center_recenters_when_still():
     interp = make(palm_smoothing=1.0)
     run(interp, two_palms(0, 800))
     run(interp, hold("Open_Palm", 833, 1433, wrist=(0.7, 0.5)))
-    # Torna più a sinistra di prima: niente comando a sorpresa...
+    # It comes back further left than before: no unexpected command...
     assert run(interp, two_palms(1466, 1800, left=(0.15, 0.5))) == []
-    # ...ma ferma lì diventa il nuovo centro e risponde subito.
+    # ...but held still there it becomes the new centre and responds at once.
     assert keys(run(interp, two_palms(1833, 1833, left=(0.05, 0.5)))) == ["KEY_LEFT"]
 
 
 def test_resting_hand_slightly_up_does_not_block_the_other():
     interp = make(palm_smoothing=1.0)
     run(interp, two_palms(0, 800))
-    sent = run(interp, two_palms(833, 833, right=(0.7, 0.38)))           # destra: su
-    sent += run(interp, two_palms(866, 1500, right=(0.7, 0.44)))         # resta appena su
-    sent += run(interp, two_palms(1533, 1533, left=(0.3, 0.62), right=(0.7, 0.44)))  # sinistra: giù
+    sent = run(interp, two_palms(833, 833, right=(0.7, 0.38)))           # right: up
+    sent += run(interp, two_palms(866, 1500, right=(0.7, 0.44)))         # stays slightly up
+    sent += run(interp, two_palms(1533, 1533, left=(0.3, 0.62), right=(0.7, 0.44)))  # left: down
     assert keys(sent) == ["KEY_UP", "KEY_DOWN"]
 
 
@@ -352,7 +352,7 @@ def test_source_hand_is_reported():
     assert interp.last_source == "left"
 
 
-# --- pollice a sinistra = indietro -----------------------------------------
+# --- thumb to the left = back ----------------------------------------------
 
 def thumb_left_frames(t0, t1, label="Closed_Fist", wrist=(0.5, 0.6), other=None, step=33):
     from tests.test_joystick import thumb_hand
@@ -369,7 +369,7 @@ def thumb_left_frames(t0, t1, label="Closed_Fist", wrist=(0.5, 0.6), other=None,
 def test_thumb_left_is_back_in_navigation():
     interp = make(palm_smoothing=1.0)
     run(interp, two_palms(0, 800))
-    # MediaPipe lo scambia per un pugno: vale comunque come pollice a sinistra.
+    # MediaPipe mistakes it for a fist: it still counts as thumb to the left.
     sent = run(interp, thumb_left_frames(833, 3000, other=(0.3, 0.5), wrist=(0.75, 0.6)))
     assert keys(sent) == ["KEY_RETURN"]
 

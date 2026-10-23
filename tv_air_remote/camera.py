@@ -1,4 +1,4 @@
-"""Acquisizione dei frame dalla webcam."""
+"""Frame capture from the webcam."""
 
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ import numpy as np
 
 
 class CameraError(RuntimeError):
-    """Webcam assente o non funzionante."""
+    """Webcam missing or not working."""
 
 
 def _open(index: int) -> cv2.VideoCapture:
     if sys.platform == "win32":
-        # Media Foundation, il backend predefinito su Windows, impiega 10-30 s
-        # ad aprire la webcam; DirectShow 1-2 s.
+        # Media Foundation, the default backend on Windows, takes 10-30 s
+        # to open the webcam; DirectShow takes 1-2 s.
         cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
         if cap.isOpened():
             return cap
@@ -38,8 +38,8 @@ class Camera:
         self._cap.set(cv2.CAP_PROP_FPS, fps)
 
     def read(self) -> tuple[np.ndarray, int] | None:
-        """Frame specchiato (sinistra dell'utente = sinistra a schermo) e
-        timestamp monotono in ms, oppure None se la lettura fallisce."""
+        """Mirrored frame (user's left = left on screen) and monotonic
+        timestamp in ms, or None if the read fails."""
         ok, frame = self._cap.read()
         if not ok:
             return None

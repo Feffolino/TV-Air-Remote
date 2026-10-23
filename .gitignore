@@ -1,8 +1,44 @@
-.venv/
-__pycache__/
-*.egg-info/
-.pytest_cache/
-models/
+# Local settings: TV address, MAC and pairing token
 config.yaml
 .tv_token
+
+# Downloaded recognition model (fetched on first run)
+models/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Test and tool caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+
+# Editors (the shared VS Code launch and settings files stay tracked)
+.idea/
+.vscode/*
+!.vscode/launch.json
+!.vscode/settings.json
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Git Bash crash dumps
 *.stackdump

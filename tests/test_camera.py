@@ -52,7 +52,7 @@ def test_read_failure_returns_none(monkeypatch):
 
 
 def record(monkeypatch, platform, captures):
-    """Sostituisce VideoCapture: restituisce le capture in ordine, annota i backend."""
+    """Replace VideoCapture: return the captures in order, record the backends."""
     calls = []
     pending = iter(captures)
 
@@ -66,7 +66,7 @@ def record(monkeypatch, platform, captures):
 
 
 def test_windows_uses_directshow(monkeypatch):
-    # Media Foundation, il backend predefinito, impiega 10-30 s ad aprire la webcam.
+    # Media Foundation, the default backend, takes 10-30 s to open the webcam.
     calls = record(monkeypatch, "win32", [FakeCapture()])
     Camera()
     assert calls == [(camera_module.cv2.CAP_DSHOW,)]

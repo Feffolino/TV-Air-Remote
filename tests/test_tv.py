@@ -114,7 +114,7 @@ def test_send_failure_disconnects(tmp_path):
 
 
 def test_send_failure_reconnects_and_resends(tmp_path):
-    # La TV chiude il collegamento inattivo: il tasto non deve andare perso.
+    # The TV closes the idle connection: the key must not be lost.
     stale, fresh = FakeRemote(fail_send=True), FakeRemote()
     ctl, _ = make(tmp_path, [stale, fresh])
     ctl.connect()

@@ -1,4 +1,4 @@
-"""Traduzione delle osservazioni delle mani in tasti della TV."""
+"""Translation of hand observations into TV keys."""
 
 from __future__ import annotations
 
@@ -11,15 +11,15 @@ from .joystick import (ALL_DIRECTIONS, OPEN_PALM, VERTICAL, Direction, PalmJoyst
 from .observation import HandObservation
 
 CLOSED_FIST = "Closed_Fist"
-THUMB_LEFT = "Thumb_Left"  # riconosciuta dalla forma, MediaPipe non la conosce
-# Palmo → pugno → palmo in fretta: un "clic".
+THUMB_LEFT = "Thumb_Left"  # recognised from the shape, MediaPipe does not know it
+# Palm → fist → palm in quick succession: a "click".
 CLICK = "PALM_CLICK"
-# Frame di pugno minimi per un clic: uno solo può essere un errore di MediaPipe.
+# Minimum fist frames for a click: a single one may be a MediaPipe error.
 CLICK_MIN_FRAMES = 2
 
-# Solo il volume si ripete tenendo la gesture: un pollice su mappato su OK no.
+# Only volume repeats while the gesture is held: a thumbs-up mapped to OK does not.
 REPEAT_KEYS = frozenset({"KEY_VOLUP", "KEY_VOLDOWN"})
-# Con due mani in Navigazione ognuna spinge solo verso il proprio lato.
+# With two hands in Navigation mode, each one only pushes towards its own side.
 SIDE_DIRECTIONS = {
     "left": frozenset({Direction.LEFT, Direction.UP, Direction.DOWN}),
     "right": frozenset({Direction.RIGHT, Direction.UP, Direction.DOWN}),
@@ -28,12 +28,12 @@ SIDE_DIRECTIONS = {
 
 @dataclass
 class _Slot:
-    """Una mano seguita nel tempo, col suo joystick."""
+    """A hand tracked over time, with its joystick."""
     joystick: PalmJoystick
     point: tuple[float, float] | None = None
     seen: int | None = None
     palm_seen: int | None = None
-    fist_since: int | None = None  # pugno appena chiuso dopo il palmo: forse un clic
+    fist_since: int | None = None  # fist just closed after the palm: maybe a click
     fist_frames: int = 0
 
     def reset(self) -> None:
@@ -43,22 +43,23 @@ class _Slot:
 
 
 class GestureInterpreter:
-    """Macchina a stati senza I/O: riceve le mani di un frame, restituisce tasti.
+    """State machine without I/O: takes the hands of one frame, returns keys.
 
-    La modalità dipende da quante mani sono in vista: due mani per
-    ``nav_enter_ms`` = Navigazione, una mano sola per ``nav_exit_ms`` = TV.
-    L'uscita è più lenta perché MediaPipe perde spesso una delle due mani per
-    qualche centinaio di ms.
+    The mode depends on how many hands are in view: two hands for
+    ``nav_enter_ms`` = Navigation, a single hand for ``nav_exit_ms`` = TV.
+    Leaving is slower because MediaPipe often loses one of the two hands for
+    a few hundred ms.
 
-    Ogni mano col palmo aperto fa da joystick. Con due mani in Navigazione la
-    mano più a sinistra nell'immagine fa sinistra, su e giù, quella più a
-    destra fa destra, su e giù; su e giù partono da una mano sola alla volta.
-    Con una mano sola quella fa tutte le direzioni. Chiudere e riaprire il
-    palmo entro ``click_ms`` è un clic (``PALM_CLICK``) e non sposta il centro.
-    Le altre gesture sono comandi, presi dalla mano più sicura.
+    Each hand with an open palm acts as a joystick. With two hands in
+    Navigation mode, the leftmost hand in the image does left, up and down, the
+    rightmost does right, up and down; up and down come from one hand at a time.
+    With a single hand, that hand does all directions. Closing and reopening
+    the palm within ``click_ms`` is a click (``PALM_CLICK``) and does not move
+    the centre. The other gestures are commands, taken from the most confident
+    hand.
 
-    Il tempo arriva dall'esterno (``t_ms``), quindi il comportamento è
-    deterministico e testabile.
+    Time comes from outside (``t_ms``), so the behaviour is deterministic
+    and testable.
     """
 
     def __init__(self, config: Config) -> None:
@@ -73,7 +74,7 @@ class GestureInterpreter:
         self._last_seen: int | None = None
         self._fired_label: str | None = None
         self._fired_seen = 0
-        self.last_source: str | None = None  # mano ("left"/"right") dell'ultimo comando
+        self.last_source: str | None = None  # hand ("left"/"right") of the last command
         self._reset_static()
 
     def _new_joystick(self) -> PalmJoystick:
@@ -94,7 +95,7 @@ class GestureInterpreter:
 
     @property
     def gesture(self) -> str | None:
-        """Gesture stabile corrente, None se nessuna."""
+        """Current stable gesture, None if there is none."""
         if any(slot.palm_seen is not None for slot in self._slots.values()):
             return OPEN_PALM
         if self._count >= self._thr.stable_frames:
@@ -104,8 +105,8 @@ class GestureInterpreter:
     def update(self, hands: list[HandObservation], t_ms: int) -> list[str]:
         self._update_mode(len(hands), t_ms)
         assigned = self._assign(hands)
-        # Una mano persa per poco tiene il suo centro: MediaPipe perde spesso
-        # una delle due mani, e ricentrare ogni volta la renderebbe muta.
+        # A hand lost briefly keeps its centre: MediaPipe often loses one of
+        # the two hands, and recentring every time would leave it silent.
         for side, slot in self._slots.items():
             if side not in assigned and slot.seen is not None \
                     and t_ms - slot.seen > self._thr.palm_keep_ms:
@@ -126,8 +127,8 @@ class GestureInterpreter:
                 obs = replace(obs, gesture=THUMB_LEFT, score=1.0)
             slot = self._slots[side]
             if slot.seen is not None and t_ms - slot.seen > self._thr.hand_lost_ms:
-                # Ricomparsa: niente comandi finché non torna al centro o non
-                # resta ferma dove si trova.
+                # Reappeared: no commands until it returns to the centre or
+                # stays still where it is.
                 slot.joystick.latch(recenter=True)
                 slot.palm_seen = slot.fist_since = None
                 slot.fist_frames = 0
@@ -145,15 +146,15 @@ class GestureInterpreter:
                     moves.append((side, direction))
             elif obs.gesture == CLOSED_FIST and slot.palm_seen is not None \
                     and t_ms - (slot.fist_since or t_ms) <= self._thr.click_ms:
-                # Forse un clic: il centro del joystick resta, il pugno conta
-                # comunque come gesture (tenuto a lungo apre la Home).
+                # Maybe a click: the joystick centre stays, but the fist still
+                # counts as a gesture (held for long, it opens Home).
                 if slot.fist_since is None:
                     slot.fist_since = t_ms
                 slot.fist_frames += 1
                 statics.append(obs)
             elif slot.palm_seen is not None and t_ms - slot.palm_seen <= self._thr.hand_lost_ms \
                     and slot.fist_since is None:
-                pass  # MediaPipe perde l'etichetta del palmo per qualche frame: si aspetta.
+                pass  # MediaPipe loses the palm label for a few frames: wait.
             else:
                 slot.palm_seen = slot.fist_since = None
                 slot.fist_frames = 0
@@ -162,7 +163,7 @@ class GestureInterpreter:
 
         keys: list[str] = []
         if clicked:
-            self._reset_static()  # il pugno del clic non deve diventare un comando
+            self._reset_static()  # the click's fist must not become a command
             action = self._mapping[self.mode].get(CLICK)
             if action is not None:
                 keys += self._execute(action)
@@ -184,7 +185,7 @@ class GestureInterpreter:
         return keys
 
     def _assign(self, hands: list[HandObservation]) -> dict[str, HandObservation]:
-        """Mani → slot: con due mani per posizione, con una la più vicina."""
+        """Hands → slots: by position with two hands, the nearest slot with one."""
         if len(hands) >= 2:
             left, right = sorted(hands[:2], key=lambda h: palm_point(h.landmarks, h.wrist)[0])
             return {"left": left, "right": right}
@@ -199,11 +200,11 @@ class GestureInterpreter:
         return {side: hand}
 
     def _owns_vertical(self, side: str) -> bool:
-        """Su e giù da una mano sola: quella che li ha iniziati per prima."""
+        """Up and down from one hand only: the one that started them first."""
         mine = self._slots[side].joystick
         other = self._slots["right" if side == "left" else "left"].joystick
-        # L'altra mano tiene su/giù solo se è davvero oltre la soglia, non se
-        # è rimasta appena spostata dopo un comando.
+        # The other hand keeps up/down only if it is really past the threshold,
+        # not if it was left slightly off centre after a command.
         if other.direction not in VERTICAL or other.offset < other.zone:
             return True
         return (mine.entered_t, side != "left") < (other.entered_t, side == "left")
@@ -223,8 +224,8 @@ class GestureInterpreter:
             if t_ms - self._pending_since >= wait:
                 self.mode = target
                 self._pending_mode = None
-                # Niente comandi ereditati dall'altra modalità: il palmo deve
-                # prima tornare al centro, che però resta dov'era.
+                # No commands carried over from the other mode: the palm must
+                # first return to the centre, which stays where it was.
                 for slot in self._slots.values():
                     slot.joystick.latch()
                 self._reset_static()
@@ -237,8 +238,8 @@ class GestureInterpreter:
 
     def _on_static(self, obs: HandObservation, t_ms: int) -> list[str]:
         label = obs.gesture if obs.score >= self._thr.min_score else None
-        # Una gesture già eseguita vale finché non viene lasciata per release_ms:
-        # un'etichetta persa per un attimo non la fa ripartire.
+        # A gesture already executed holds until it is released for release_ms:
+        # a label lost for a moment does not trigger it again.
         if label is not None and label == self._fired_label:
             if t_ms - self._fired_seen <= self._thr.release_ms:
                 self._fired_seen = t_ms

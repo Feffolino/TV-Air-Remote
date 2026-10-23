@@ -104,7 +104,7 @@ def test_unknown_mode(tmp_path):
 
 
 def test_switch_to_is_no_longer_supported(tmp_path):
-    # La modalità ora dipende dal numero di mani, non da una gesture.
+    # The mode now depends on the number of hands, not on a gesture.
     with pytest.raises(ConfigError, match="switch_to"):
         load_config(write(
             tmp_path,

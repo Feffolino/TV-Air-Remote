@@ -1,4 +1,4 @@
-"""Invio dei tasti alla TV Samsung in un thread separato."""
+"""Sending keys to the Samsung TV on a separate thread."""
 
 from __future__ import annotations
 
@@ -54,11 +54,11 @@ def send_wol(mac: str) -> None:
 
 
 class TvController:
-    """Collegamento alla TV con riconnessione automatica.
+    """Connection to the TV with automatic reconnection.
 
-    ``send`` non blocca mai: i tasti finiscono in una coda letta da un thread
-    dedicato. Con la TV non connessa i tasti vengono scartati, tranne
-    ``KEY_POWER`` che, se è configurato il MAC, diventa un Wake-on-LAN.
+    ``send`` never blocks: keys go into a queue read by a dedicated thread.
+    While the TV is not connected keys are dropped, except ``KEY_POWER``,
+    which becomes a Wake-on-LAN if the MAC address is configured.
     """
 
     def __init__(
@@ -106,8 +106,8 @@ class TvController:
                     pass
 
     def connect(self) -> float:
-        """Tenta il collegamento. Restituisce i secondi di attesa prima del
-        prossimo tentativo, 0 se il collegamento è riuscito."""
+        """Try to connect. Return the seconds to wait before the next
+        attempt, 0 if the connection succeeded."""
         if not os.path.exists(self._cfg.token_file):
             self.status = TvStatus.AWAITING_AUTH
             log.info("First connection: allow access on the TV")
@@ -136,15 +136,15 @@ class TvController:
         return 0.0
 
     def process_one(self, timeout: float = 0.2) -> None:
-        """Invia il prossimo tasto in coda, se c'è."""
+        """Send the next queued key, if there is one."""
         try:
             key = self._queue.get(timeout=timeout) if timeout else self._queue.get_nowait()
         except queue.Empty:
             return
         if self._try_send(key):
             return
-        # La TV chiude i collegamenti inattivi: ci si riconnette e si rinvia
-        # il tasto una sola volta, così la gesture non va persa.
+        # The TV closes idle connections: reconnect and resend the key
+        # only once, so the gesture is not lost.
         if self.connect() == 0.0 and self._try_send(key):
             log.info("Resent %s after reconnecting", key)
 
@@ -181,7 +181,7 @@ def _close_quietly(remote: Remote) -> None:
 
 
 class DryRunTv:
-    """TV finta per --dry-run: registra i tasti senza contattare la TV."""
+    """Fake TV for --dry-run: logs the keys without contacting the TV."""
 
     status = TvStatus.CONNECTED
 

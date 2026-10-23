@@ -65,11 +65,11 @@ def test_ensure_model_download_failure(tmp_path):
     assert not path.with_suffix(".part").exists()
 
 
-@pytest.mark.skipif(not DEFAULT_MODEL_PATH.exists(), reason="modello non scaricato")
+@pytest.mark.skipif(not DEFAULT_MODEL_PATH.exists(), reason="model not downloaded")
 def test_recognizer_on_blank_frame():
     from tv_air_remote.recognizer import GestureRecognizer
 
     with GestureRecognizer(DEFAULT_MODEL_PATH) as recognizer:
         frame = np.zeros((480, 640, 3), np.uint8)
         assert recognizer.recognize(frame, 0) == []
-        assert recognizer.recognize(frame, 0) == []  # timestamp ripetuto: va corretto
+        assert recognizer.recognize(frame, 0) == []  # repeated timestamp: must be corrected

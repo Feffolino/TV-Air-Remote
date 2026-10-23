@@ -1,4 +1,4 @@
-"""Osservazione di una mano in un singolo frame."""
+"""Observation of one hand in a single frame."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class HandObservation:
-    gesture: str | None  # nome della gesture MediaPipe, None se nessuna
+    gesture: str | None  # MediaPipe gesture name, None if there is none
     score: float
-    wrist: tuple[float, float]  # coordinate normalizzate [0, 1], y verso il basso
+    wrist: tuple[float, float]  # normalised coordinates [0, 1], y pointing down
     t_ms: int
     landmarks: tuple[tuple[float, float], ...] = ()

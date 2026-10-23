@@ -8,14 +8,14 @@ def test_draw_changes_frame_and_keeps_shape():
     frame = np.zeros((480, 640, 3), np.uint8)
     points = tuple((0.3 + i * 0.01, 0.5) for i in range(21))
     obs = HandObservation("Thumb_Up", 0.9, points[0], 0, points)
-    out = draw(frame, [obs], "nav", "Thumb_Up", "KEY_VOLUP", "connessa")
+    out = draw(frame, [obs], "nav", "Thumb_Up", "KEY_VOLUP", "connected")
     assert out.shape == (480, 640, 3)
     assert out.any()
 
 
 def test_draw_without_hand():
     frame = np.zeros((480, 640, 3), np.uint8)
-    assert draw(frame, [], "tv", None, None, "non connessa").any()
+    assert draw(frame, [], "tv", None, None, "disconnected").any()
 
 
 def test_legend_lists_commands_of_the_mode():
@@ -81,7 +81,7 @@ def test_draw_joystick_and_two_hands():
     other = tuple((0.1, 0.5 + i * 0.01) for i in range(21))
     hands = [HandObservation("Open_Palm", 0.9, points[0], 0, points),
              HandObservation(None, 0.6, other[0], 0, other)]
-    draw(frame, hands, "nav", "Open_Palm", None, "connessa",
+    draw(frame, hands, "nav", "Open_Palm", None, "connected",
          joysticks=[JoystickView((0.5, 0.5), 0.12, "RIGHT"), JoystickView((0.2, 0.5), 0.12, None)])
-    # Freccia gialla verso destra a partire dal centro del joystick.
+    # Yellow arrow pointing right, starting from the centre of the joystick.
     assert (frame[240, 330:390] == (0, 255, 255)).all(axis=1).any()

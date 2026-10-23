@@ -1,4 +1,4 @@
-"""Riconoscimento delle gesture con MediaPipe Gesture Recognizer."""
+"""Gesture recognition with MediaPipe Gesture Recognizer."""
 
 from __future__ import annotations
 
@@ -23,11 +23,11 @@ DEFAULT_MODEL_PATH = Path("models") / "gesture_recognizer.task"
 
 
 class ModelError(RuntimeError):
-    """Modello assente e impossibile da scaricare."""
+    """Model missing and impossible to download."""
 
 
 def ensure_model(path: Path = DEFAULT_MODEL_PATH, url: str = MODEL_URL) -> Path:
-    """Restituisce il percorso del modello, scaricandolo se manca."""
+    """Return the model path, downloading the model if it is missing."""
     path = Path(path)
     if path.exists():
         return path
@@ -47,7 +47,7 @@ def ensure_model(path: Path = DEFAULT_MODEL_PATH, url: str = MODEL_URL) -> Path:
 
 
 def hands(result: Any, t_ms: int) -> list[HandObservation]:
-    """Le mani di un GestureRecognizerResult, una osservazione ciascuna."""
+    """The hands of a GestureRecognizerResult, one observation each."""
     out = []
     for categories, hand in zip(result.gestures, result.hand_landmarks):
         if not categories:
@@ -60,7 +60,7 @@ def hands(result: Any, t_ms: int) -> list[HandObservation]:
 
 
 class GestureRecognizer:
-    """MediaPipe in modalità VIDEO, fino a due mani tracciate."""
+    """MediaPipe in VIDEO mode, tracking up to two hands."""
 
     def __init__(self, model_path: Path) -> None:
         import mediapipe as mp
@@ -76,7 +76,7 @@ class GestureRecognizer:
         self._last_t = -1
 
     def recognize(self, frame_bgr: np.ndarray, t_ms: int) -> list[HandObservation]:
-        # MediaPipe richiede timestamp strettamente crescenti.
+        # MediaPipe requires strictly increasing timestamps.
         t_ms = max(t_ms, self._last_t + 1)
         self._last_t = t_ms
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)

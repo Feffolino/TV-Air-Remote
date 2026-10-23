@@ -1,4 +1,4 @@
-"""Avvio: python -m tv_air_remote."""
+"""Entry point: python -m tv_air_remote."""
 
 from __future__ import annotations
 
