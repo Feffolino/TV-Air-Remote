@@ -30,8 +30,8 @@ class Camera:
         if not self._cap.isOpened():
             self._cap.release()
             raise CameraError(
-                f"Impossibile aprire la webcam con indice {index}. "
-                "Prova un altro indice con --camera N."
+                f"Cannot open the webcam with index {index}. "
+                "Try another index with --camera N."
             )
         self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)

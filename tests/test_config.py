@@ -124,3 +124,14 @@ def test_play_pause_is_valid_action(tmp_path):
 def test_old_swipe_thresholds_are_rejected(tmp_path):
     with pytest.raises(ConfigError, match="swipe_min_dist"):
         load_config(write(tmp_path, "tv:\n  host: 1.2.3.4\nthresholds:\n  swipe_min_dist: 0.15\n"))
+
+
+def test_ui_language_defaults_to_english_and_can_be_italian(tmp_path):
+    assert load_config(write(tmp_path, "tv:\n  host: 1.2.3.4\n")).ui.language == "en"
+    cfg = load_config(write(tmp_path, "tv:\n  host: 1.2.3.4\nui:\n  language: it\n"))
+    assert cfg.ui.language == "it"
+
+
+def test_unknown_ui_language(tmp_path):
+    with pytest.raises(ConfigError, match="fr"):
+        load_config(write(tmp_path, "tv:\n  host: 1.2.3.4\nui:\n  language: fr\n"))

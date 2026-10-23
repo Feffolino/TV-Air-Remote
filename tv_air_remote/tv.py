@@ -21,10 +21,11 @@ POWER_KEY = "KEY_POWER"
 
 
 class TvStatus(Enum):
-    CONNECTED = "connessa"
-    DISCONNECTED = "non connessa"
-    AWAITING_AUTH = "consenti l'accesso sulla TV"
-    AUTH_DENIED = "accesso negato (vedi log)"
+    # Values are ids: the overlay shows them translated (see i18n.py).
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    AWAITING_AUTH = "awaiting_auth"
+    AUTH_DENIED = "auth_denied"
 
 
 class Remote(Protocol):
@@ -89,10 +90,10 @@ class TvController:
     def send(self, key: str) -> None:
         if self.status is not TvStatus.CONNECTED:
             if key == POWER_KEY and self._cfg.mac:
-                log.info("TV non connessa: invio Wake-on-LAN a %s", self._cfg.mac)
+                log.info("TV not connected: sending Wake-on-LAN to %s", self._cfg.mac)
                 self._wol(self._cfg.mac)
             else:
-                log.info("TV %s: scartato %s", self.status.value, key)
+                log.info("TV %s: dropped %s", self.status.value, key)
             return
         while True:
             try:
@@ -100,7 +101,7 @@ class TvController:
                 return
             except queue.Full:
                 try:
-                    log.warning("Coda piena: scartato %s", self._queue.get_nowait())
+                    log.warning("Queue full: dropped %s", self._queue.get_nowait())
                 except queue.Empty:
                     pass
 
@@ -109,7 +110,7 @@ class TvController:
         prossimo tentativo, 0 se il collegamento è riuscito."""
         if not os.path.exists(self._cfg.token_file):
             self.status = TvStatus.AWAITING_AUTH
-            log.info("Primo collegamento: consenti l'accesso dalla TV")
+            log.info("First connection: allow access on the TV")
         remote = self._factory(self._cfg)
         try:
             remote.open()
@@ -118,20 +119,20 @@ class TvController:
             if isinstance(exc, UnauthorizedError):
                 self.status = TvStatus.AUTH_DENIED
                 log.error(
-                    "La TV ha negato l'accesso. Abilita '%s' in Impostazioni > "
-                    "Generale > Gestione dispositivi esterni > Gestione "
-                    "connessione dispositivi.", self._cfg.name,
+                    "The TV denied access. Enable '%s' in Settings > General > "
+                    "External Device Manager > Device Connection Manager.",
+                    self._cfg.name,
                 )
             else:
                 self.status = TvStatus.DISCONNECTED
-                log.info("TV %s non raggiungibile: %s", self._cfg.host, exc)
+                log.info("TV %s not reachable: %s", self._cfg.host, exc)
             wait = self._backoff
             self._backoff = min(self._backoff * 2, MAX_BACKOFF_S)
             return wait
         self._remote = remote
         self._backoff = 1.0
         self.status = TvStatus.CONNECTED
-        log.info("TV %s connessa", self._cfg.host)
+        log.info("TV %s connected", self._cfg.host)
         return 0.0
 
     def process_one(self, timeout: float = 0.2) -> None:
@@ -145,13 +146,13 @@ class TvController:
         # La TV chiude i collegamenti inattivi: ci si riconnette e si rinvia
         # il tasto una sola volta, così la gesture non va persa.
         if self.connect() == 0.0 and self._try_send(key):
-            log.info("Rinviato %s dopo la riconnessione", key)
+            log.info("Resent %s after reconnecting", key)
 
     def _try_send(self, key: str) -> bool:
         try:
             self._remote.send_key(key)
         except Exception as exc:
-            log.warning("Invio di %s fallito: %s", key, exc)
+            log.warning("Sending %s failed: %s", key, exc)
             self._close_remote()
             self.status = TvStatus.DISCONNECTED
             return False
@@ -176,7 +177,7 @@ def _close_quietly(remote: Remote) -> None:
     try:
         remote.close()
     except Exception:
-        log.debug("Chiusura del collegamento fallita", exc_info=True)
+        log.debug("Closing the connection failed", exc_info=True)
 
 
 class DryRunTv:
@@ -185,7 +186,7 @@ class DryRunTv:
     status = TvStatus.CONNECTED
 
     def start(self) -> None:
-        log.info("Modalità dry-run: nessun comando verrà inviato alla TV")
+        log.info("Dry run: no command will be sent to the TV")
 
     def stop(self) -> None:
         pass

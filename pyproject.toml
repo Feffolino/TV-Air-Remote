@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tv-air-remote"
 version = "0.1.0"
-description = "Controllo di una Smart TV Samsung con le gesture delle mani"
+description = "Control a Samsung Smart TV with hand gestures from a webcam"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

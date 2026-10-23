@@ -33,14 +33,14 @@ def ensure_model(path: Path = DEFAULT_MODEL_PATH, url: str = MODEL_URL) -> Path:
         return path
     path.parent.mkdir(parents=True, exist_ok=True)
     partial = path.with_suffix(".part")
-    log.info("Scarico il modello di riconoscimento in %s", path)
+    log.info("Downloading the recognition model to %s", path)
     try:
         urllib.request.urlretrieve(url, partial)
     except (urllib.error.URLError, OSError) as exc:
         partial.unlink(missing_ok=True)
         raise ModelError(
-            f"Impossibile scaricare il modello ({exc}). "
-            f"Scaricalo a mano da {url} e salvalo in {path}"
+            f"Cannot download the model ({exc}). "
+            f"Download it manually from {url} and save it as {path}"
         ) from exc
     partial.replace(path)
     return path

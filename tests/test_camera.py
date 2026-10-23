@@ -32,7 +32,7 @@ def install(monkeypatch, capture):
 def test_camera_not_available(monkeypatch):
     capture = FakeCapture(opened=False)
     install(monkeypatch, capture)
-    with pytest.raises(CameraError, match="indice 3"):
+    with pytest.raises(CameraError, match="index 3"):
         Camera(index=3)
     assert capture.released
 

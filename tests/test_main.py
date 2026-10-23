@@ -7,7 +7,12 @@ def test_parse_args_defaults():
     args = parse_args([])
     assert args.config == "config.yaml"
     assert args.camera is None
+    assert args.lang is None
     assert not args.dry_run
+
+
+def test_parse_args_language():
+    assert parse_args(["--lang", "it"]).lang == "it"
 
 
 def test_dry_run_without_config_uses_defaults(tmp_path):

@@ -12,6 +12,7 @@ import cv2
 from .camera import Camera, CameraError
 from .config import Config, ConfigError, load_config, parse_config
 from .interpreter import GestureInterpreter
+from .i18n import LANGUAGES
 from .overlay import JoystickView, draw, legend
 from .recognizer import DEFAULT_MODEL_PATH, GestureRecognizer, ModelError, ensure_model
 from .tv import DryRunTv, TvController
@@ -26,14 +27,16 @@ log = logging.getLogger("tv_air_remote")
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python -m tv_air_remote",
-        description="Controlla una Smart TV Samsung con le gesture delle mani.",
+        description="Control a Samsung Smart TV with hand gestures.",
     )
-    parser.add_argument("--config", default="config.yaml", help="file di configurazione YAML")
-    parser.add_argument("--camera", type=int, help="indice della webcam (sovrascrive la config)")
+    parser.add_argument("--config", default="config.yaml", help="YAML configuration file")
+    parser.add_argument("--camera", type=int, help="webcam index (overrides the config)")
     parser.add_argument("--dry-run", action="store_true",
-                        help="non contatta la TV: mostra solo i tasti che invierebbe")
+                        help="do not contact the TV: only show the keys it would send")
     parser.add_argument("--model", default=str(DEFAULT_MODEL_PATH),
-                        help="percorso del modello MediaPipe")
+                        help="path of the MediaPipe model")
+    parser.add_argument("--lang", choices=LANGUAGES,
+                        help="on-screen language (overrides ui.language in the config)")
     return parser.parse_args(argv)
 
 
@@ -59,11 +62,12 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     tv = DryRunTv() if args.dry_run else TvController(config.tv)
+    language = args.lang or config.ui.language
     interpreter = GestureInterpreter(config)
     tv.start()
     try:
         with GestureRecognizer(model) as recognizer:
-            run_loop(camera, recognizer, interpreter, tv, commands_by_mode(config))
+            run_loop(camera, recognizer, interpreter, tv, commands_by_mode(config, language), language)
     except CameraError as exc:
         log.error("%s", exc)
         return 1
@@ -74,8 +78,8 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def commands_by_mode(config: Config) -> dict[str, list[tuple[str, str]]]:
-    return {mode: legend(actions, config.thresholds.hold_ms)
+def commands_by_mode(config: Config, language: str) -> dict[str, list[tuple[str, str]]]:
+    return {mode: legend(actions, config.thresholds.hold_ms, language)
             for mode, actions in config.mapping.items()}
 
 
@@ -84,7 +88,7 @@ def joystick_views(interpreter: GestureInterpreter) -> list[JoystickView]:
             for joy in interpreter.joysticks.values() if joy.center is not None]
 
 
-def run_loop(camera, recognizer, interpreter, tv, commands=None) -> None:
+def run_loop(camera, recognizer, interpreter, tv, commands=None, language="en") -> None:
     commands = commands or {}
     mode = interpreter.mode
     last_key = None
@@ -94,7 +98,7 @@ def run_loop(camera, recognizer, interpreter, tv, commands=None) -> None:
         if item is None:
             failures += 1
             if failures >= MAX_READ_FAILURES:
-                raise CameraError("La webcam ha smesso di fornire immagini")
+                raise CameraError("The webcam stopped providing frames")
             continue
         failures = 0
         frame, t_ms = item
@@ -106,9 +110,9 @@ def run_loop(camera, recognizer, interpreter, tv, commands=None) -> None:
             last_key = key
         if interpreter.mode != mode:
             mode = interpreter.mode
-            log.info("Modalita' -> %s", mode)
+            log.info("Mode -> %s", mode)
         draw(frame, hands, interpreter.mode, interpreter.gesture, last_key, tv.status.value,
-             commands.get(interpreter.mode, []), joystick_views(interpreter))
+             commands.get(interpreter.mode, []), joystick_views(interpreter), language)
         cv2.imshow(WINDOW, frame)
         if cv2.waitKey(1) & 0xFF in QUIT_KEYS:
             return

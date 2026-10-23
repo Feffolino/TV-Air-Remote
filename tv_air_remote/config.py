@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from .i18n import DEFAULT_LANGUAGE, LANGUAGES
+
 GESTURES = (
     "Thumb_Up",
     "Thumb_Down",
@@ -62,6 +64,11 @@ class CameraConfig:
     width: int = 640
     height: int = 480
     fps: int = 30
+
+
+@dataclass(frozen=True)
+class UiConfig:
+    language: str = DEFAULT_LANGUAGE
 
 
 @dataclass(frozen=True)
@@ -123,6 +130,7 @@ DEFAULT_MAPPING: dict[str, dict[str, Action]] = {
 class Config:
     tv: TvConfig
     camera: CameraConfig = field(default_factory=CameraConfig)
+    ui: UiConfig = field(default_factory=UiConfig)
     thresholds: Thresholds = field(default_factory=Thresholds)
     mapping: dict[str, dict[str, Action]] = field(
         default_factory=lambda: {mode: dict(m) for mode, m in DEFAULT_MAPPING.items()}
@@ -134,8 +142,8 @@ def load_config(path: str | Path) -> Config:
     path = Path(path)
     if not path.exists():
         raise ConfigError(
-            f"File di configurazione non trovato: {path}. "
-            f"Copia config.example.yaml in {path} e imposta l'IP della TV."
+            f"Configuration file not found: {path}. "
+            f"Copy config.example.yaml to {path} and set the TV's IP address."
         )
     with path.open(encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
@@ -145,15 +153,18 @@ def load_config(path: str | Path) -> Config:
 def parse_config(data: Any, require_host: bool = True) -> Config:
     """Valida una configurazione già letta. Le sezioni assenti usano i default."""
     if not isinstance(data, dict):
-        raise ConfigError("La configurazione deve essere una mappa YAML")
+        raise ConfigError("The configuration must be a YAML mapping")
 
     tv_data = dict(_section(data, "tv"))
     if not tv_data.get("host"):
         if require_host:
-            raise ConfigError("Campo obbligatorio mancante: tv.host (indirizzo IP della TV)")
+            raise ConfigError("Missing required field: tv.host (IP address of the TV)")
         tv_data["host"] = "dry-run"
     tv = _build(TvConfig, tv_data, "tv")
     camera = _build(CameraConfig, _section(data, "camera"), "camera")
+    ui = _build(UiConfig, _section(data, "ui"), "ui")
+    if ui.language not in LANGUAGES:
+        raise ConfigError(f"Unknown ui.language: {ui.language} (valid: {', '.join(LANGUAGES)})")
 
     thr_data = dict(_section(data, "thresholds"))
     if "repeat_gestures" in thr_data:
@@ -161,30 +172,30 @@ def parse_config(data: Any, require_host: bool = True) -> Config:
     thresholds = _build(Thresholds, thr_data, "thresholds")
     for gesture in (*thresholds.repeat_gestures, *thresholds.hold_ms):
         if gesture not in GESTURES:
-            raise ConfigError(f"Gesture sconosciuta in thresholds: {gesture}")
+            raise ConfigError(f"Unknown gesture in thresholds: {gesture}")
 
     mapping = {mode: dict(entries) for mode, entries in DEFAULT_MAPPING.items()}
     for mode, entries in _section(data, "mapping").items():
         if mode not in MODES:
             raise ConfigError(
-                f"Modalità sconosciuta in mapping: {mode} (valide: {', '.join(MODES)})"
+                f"Unknown mode in mapping: {mode} (valid: {', '.join(MODES)})"
             )
         mapping[mode] = _parse_mode(mode, entries or {})
 
-    return Config(tv=tv, camera=camera, thresholds=thresholds, mapping=mapping)
+    return Config(tv=tv, camera=camera, ui=ui, thresholds=thresholds, mapping=mapping)
 
 
 def _section(data: dict[str, Any], name: str) -> dict[str, Any]:
     value = data.get(name) or {}
     if not isinstance(value, dict):
-        raise ConfigError(f"La sezione {name} deve essere una mappa")
+        raise ConfigError(f"Section {name} must be a mapping")
     return value
 
 
 def _build(cls: type, values: dict[str, Any], section: str) -> Any:
     unknown = set(values) - {f.name for f in fields(cls)}
     if unknown:
-        raise ConfigError(f"Campo sconosciuto in {section}: {', '.join(sorted(unknown))}")
+        raise ConfigError(f"Unknown field in {section}: {', '.join(sorted(unknown))}")
     return cls(**values)
 
 
@@ -193,14 +204,14 @@ def _parse_mode(mode: str, entries: dict[str, Any]) -> dict[str, Action]:
     for trigger, value in entries.items():
         where = f"mapping.{mode}.{trigger}"
         if trigger not in GESTURES and trigger not in PALM_TRIGGERS:
-            raise ConfigError(f"Gesture sconosciuta in mapping.{mode}: {trigger}")
+            raise ConfigError(f"Unknown gesture in mapping.{mode}: {trigger}")
         if isinstance(value, str):
             action = Action(value)
         elif isinstance(value, dict) and set(value) == {"key"}:
             action = Action(str(value["key"]))
         else:
-            raise ConfigError(f"Valore non valido in {where}: {value!r}")
+            raise ConfigError(f"Invalid value in {where}: {value!r}")
         if action.key != PLAY_PAUSE and action.key not in VALID_KEYS:
-            raise ConfigError(f"Tasto non valido in {where}: {action.key}")
+            raise ConfigError(f"Invalid key in {where}: {action.key}")
         actions[trigger] = action
     return actions

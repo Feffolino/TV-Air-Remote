@@ -1,21 +1,31 @@
 # TV Air Remote
 
-Controlla una Smart TV Samsung (Tizen) con le gesture delle mani. Una webcam
-collegata al PC riprende la mano, MediaPipe riconosce la gesture in tempo reale
-e il programma invia il tasto corrispondente alla TV attraverso la rete.
+Control a Samsung Smart TV (Tizen) with your hands. A webcam connected to your
+computer watches your hands, [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/gesture_recognizer)
+tracks them in real time, and the program sends the matching remote-control key
+to the TV over your local network.
 
-Pensato per l'uso quotidiano come televisore: cambio canale e volume sono i
-comandi più rapidi, la navigazione nei menu è disponibile in una modalità a
-parte.
+It is built for everyday TV watching: volume and channels need a single open
+hand, while menu navigation uses both hands.
 
-## Requisiti
+- **Open palm as a joystick**: move it a little to change volume or channel,
+  hold it to keep going, move it further to go faster.
+- **Two hands = navigation**: the left hand moves left, the right hand moves
+  right, either one moves up and down.
+- **Click** (close and reopen your hand) = OK, which also pauses and resumes
+  videos. **Thumb pointing left** = back. **Fist** held for 1 s = Home.
+- On-screen legend of the available commands, in English or Italian.
+- Automatic reconnection to the TV, Wake-on-LAN power on, dry-run mode for
+  testing without a TV.
 
-- Python 3.11 o 3.12
-- Una webcam (quella integrata del portatile va bene)
-- Una TV Samsung Tizen (modelli dal 2016 in poi) sulla stessa rete del PC
-- Su Linux: le librerie `libegl1` e `libgles2` (richieste da MediaPipe)
+## Requirements
 
-## Installazione
+- Python 3.11 or 3.12
+- A webcam (a laptop's built-in one is fine)
+- A Samsung Tizen TV (2016 models onwards) on the same network as the computer
+- On Linux: the `libegl1` and `libgles2` libraries (needed by MediaPipe)
+
+## Installation
 
 ```bash
 git clone https://github.com/Feffolino/TV-Air-Remote.git
@@ -25,161 +35,196 @@ python -m venv .venv
 pip install -e .
 ```
 
-Al primo avvio il modello di riconoscimento (circa 8 MB) viene scaricato in
+On the first run the recognition model (about 8 MB) is downloaded into
 `models/`.
 
-> Non installare `opencv-python`: MediaPipe usa già `opencv-contrib-python` e
-> i due pacchetti insieme si danneggiano a vicenda.
+> Do not install `opencv-python`: MediaPipe already depends on
+> `opencv-contrib-python`, and having both installed breaks OpenCV.
 
-## Configurazione
+## Configuration
 
-1. Copia il file di esempio:
+1. Copy the example file:
    ```bash
    cp config.example.yaml config.yaml
    ```
-2. Inserisci l'IP della TV in `tv.host`. Lo trovi sulla TV in
-   Impostazioni > Generale > Rete > Stato rete > Impostazioni IP.
-   Conviene assegnare alla TV un IP fisso dal router.
-3. Facoltativo, per accendere la TV con la gesture: inserisci in `tv.mac` il
-   MAC address della TV e attiva sulla TV
-   Impostazioni > Generale > Rete > Impostazioni esperto > Accensione con
-   dispositivo mobile.
+2. Set the TV's IP address in `tv.host`. You can find it on the TV under
+   Settings > General > Network > Network Status > IP Settings. Giving the TV a
+   fixed IP address in your router is a good idea.
+3. Optional, to turn the TV on with a gesture: set the TV's MAC address in
+   `tv.mac` and enable Settings > General > Network > Expert Settings >
+   Power On with Mobile on the TV.
+4. Optional: set `ui.language` to `it` for the Italian on-screen interface
+   (the default is `en`).
 
-### Primo collegamento
+`config.yaml` holds your network details and is ignored by git.
 
-Al primo avvio la TV mostra la richiesta di consentire l'accesso a
-"TV Air Remote": conferma con il telecomando. Il permesso viene salvato in
-`.tv_token` e non verrà più chiesto.
+### First connection
 
-Se hai rifiutato per errore: Impostazioni > Generale > Gestione dispositivi
-esterni > Gestione connessione dispositivi, poi abilita "TV Air Remote".
+On the first run the TV asks whether to allow "TV Air Remote": accept with the
+remote. The permission is stored in `.tv_token` and will not be asked again.
 
-## Avvio
+If you denied it by mistake: Settings > General > External Device Manager >
+Device Connection Manager, then allow "TV Air Remote".
+
+## Usage
 
 ```bash
-python -m tv_air_remote             # usa config.yaml
-python -m tv_air_remote --dry-run   # prova le gesture senza toccare la TV
-python -m tv_air_remote --camera 1  # usa un'altra webcam
+python -m tv_air_remote              # uses config.yaml
+python -m tv_air_remote --dry-run    # try the gestures without touching the TV
+python -m tv_air_remote --camera 1   # use another webcam
+python -m tv_air_remote --lang it    # Italian on-screen interface
 ```
 
-Si apre una finestra con l'immagine della webcam, la mano tracciata, la
-modalità attiva, la gesture riconosciuta, l'ultimo tasto inviato e lo stato
-della TV. Premi `q` o `ESC` per uscire.
+A window opens with the webcam image, the tracked hands, the current mode, the
+recognised gesture, the last key sent, the TV status and the list of commands
+available in the current mode. Press `q` or `ESC` to quit.
 
-## Gesture
+On Windows, `quick-tests.bat` opens a menu with the most common runs: dry run,
+TV connection check, Wake-on-LAN, full run and the automated tests.
 
-La modalità dipende da quante mani vede la webcam: **una mano = TV**,
-**due mani = Navigazione**. Si entra in Navigazione dopo 0,4 s con due mani e
-se ne esce dopo 1,5 s con una mano sola, così una mano persa per un attimo
-non cambia modalità.
+## Gestures
 
-Il **palmo aperto** fa da joystick. Tienilo fermo per circa 0,3 s: quel punto
-diventa il centro (riquadro grigio a schermo). Spostalo di poco in su, in giù,
-a sinistra o a destra: il comando parte subito e, se resti lì, si ripete. Più
-ti allontani dal centro, più si ripete in fretta: appena oltre il riquadro una
-volta ogni 0,7 s circa, lontano fino a 0,15 s. Tornando al centro si ferma;
-passando da destra a sinistra cambia subito direzione. Chiudendo o togliendo
-la mano il centro si azzera.
+The mode depends on how many hands the webcam sees: **one hand = TV mode**,
+**two hands = Navigation mode**. Navigation starts after 0.4 s with two hands
+and ends after 1.5 s with a single hand, so a hand lost for a moment does not
+change mode.
 
-Con **due mani in Navigazione** ognuna ha il suo joystick: la mano a sinistra
-nell'immagine fa sinistra, su e giù, quella a destra fa destra, su e giù.
-Spostare una mano verso l'altra non fa nulla. Su e giù fatti con entrambe
-contano una volta sola. Se la webcam perde una delle due mani, quella che
-resta fa tutte le direzioni.
+### The palm joystick
 
-### Modalità TV (una mano)
+Hold your **open palm** still for about 0.3 s: that point becomes the centre
+(a grey square on screen). Move the palm a little up, down, left or right: the
+command is sent at once and, if you stay there, it repeats. The further you
+move from the centre, the faster it repeats: about every 0.7 s just past the
+square, down to every 0.15 s further out. Back at the centre it stops; going
+straight from right to left switches direction immediately. Moving
+diagonally keeps the direction you started with.
 
-| Gesture | Comando |
+With **two hands in Navigation mode** each hand has its own joystick: the hand
+on the left of the image moves left, up and down, the hand on the right moves
+right, up and down. Moving a hand towards the other one does nothing, and up
+or down done with both hands counts once. If the webcam loses one of the two
+hands, the remaining one handles every direction. A hand lost for less than
+1.5 s keeps its centre.
+
+### TV mode (one hand)
+
+| Gesture | Command |
 |---|---|
-| Palmo su / giù | volume + / − (tenuto si ripete, più veloce se ti allontani) |
-| Palmo a destra / sinistra | canale successivo / precedente |
-| Chiudi e riapri la mano (clic) | OK, che nei video fa pausa / play |
-| Pollice su / giù (tenuto) | volume + / − (alternativa al palmo) |
-| Pugno, tenuto 1 s | apre la Home |
-| 🤟 (pollice, indice e mignolo), tenuto 1,5 s | accende / spegne |
+| Palm up / down | volume + / − (repeats while held, faster further out) |
+| Palm right / left | next / previous channel |
+| Close and reopen your hand (click) | OK, which pauses and resumes videos |
+| Thumb up / down (held) | volume + / − (alternative to the palm) |
+| Fist, held for 1 s | Home |
+| 🤟 (thumb, index and pinky), held for 1.5 s | power on / off |
 
-### Modalità Navigazione (due mani)
+### Navigation mode (two hands)
 
-| Gesture | Comando |
+| Gesture | Command |
 |---|---|
-| Palmo su / giù / sinistra / destra | frecce |
-| Chiudi e riapri la mano (clic) | OK |
-| Pollice su | OK (alternativa al clic) |
-| Pollice verso sinistra (dita chiuse) | indietro |
-| Vittoria ✌ | indietro (alternativa) |
-| Pollice giù | volume − |
-| 🤟 tenuto 1,5 s | accende / spegne |
+| Palm up / down / left / right | arrow keys |
+| Close and reopen your hand (click) | OK |
+| Thumb up | OK (alternative to the click) |
+| Thumb pointing left, other fingers closed | back |
+| Victory ✌ | back (alternative) |
+| Thumb down | volume − |
+| 🤟 held for 1.5 s | power on / off |
 
-Il pugno tenuto qui non fa nulla.
+Holding a fist does nothing in this mode.
 
-Un comando singolo (pugno, 🤟, OK, indietro) vale una volta: per ripeterlo
-lascia la gesture per almeno mezzo secondo.
+A single command (fist, 🤟, OK, back) fires once: to repeat it, release the
+gesture for at least half a second.
 
-Tutte le associazioni e le soglie si possono cambiare nelle sezioni
-`mapping` e `thresholds` di `config.yaml`.
+The thumb pointing left is recognised from the shape of the hand rather than
+from MediaPipe's labels, which have no such gesture. Thumb up, thumb down and
+victory rely on MediaPipe's labels and can be unreliable with some webcams or
+lighting: the palm, the click, the fist and the thumb pointing left are the
+most dependable gestures.
 
-## Consigli d'uso
+Every mapping and threshold can be changed in the `mapping` and `thresholds`
+sections of `config.yaml`.
 
-- Stai a 1-3 metri dalla webcam, con le mani ben visibili e non in controluce.
-- Fai le gesture con calma: una gesture vale dopo circa 0,2 s di stabilità.
-- Se una gesture viene riconosciuta a fatica, abbassa leggermente
-  `thresholds.min_score` (es. 0.6); se ci sono comandi indesiderati, alzalo.
-- Se il palmo fa scattare comandi con movimenti troppo piccoli, alza
-  `thresholds.palm_zone`; se devi spostarlo troppo, abbassalo.
+## Tips
 
-## Checklist di prova (`--dry-run`)
+- Stay 1–3 metres from the webcam, with your hands clearly visible and not
+  against a bright window.
+- Make gestures calmly: a gesture counts after about 0.2 s of stability.
+- If a gesture is hard to trigger, lower `thresholds.min_score` slightly (for
+  example 0.6); if you get unwanted commands, raise it.
+- If tiny movements of the palm trigger commands, raise `thresholds.palm_zone`;
+  if you have to move it too much, lower it.
 
-Avvia `python -m tv_air_remote --dry-run` e verifica che nel terminale compaia
-il tasto atteso:
+## Dry-run checklist
 
-- [ ] Una mano: palmo fermo, poi spostato in su → `KEY_VOLUP`; in giù → `KEY_VOLDOWN`
-- [ ] Una mano: palmo a destra → `KEY_CHUP`; a sinistra → `KEY_CHDOWN`
-- [ ] Palmo tenuto in su → `KEY_VOLUP` ripetuto; tornato al centro → si ferma
-- [ ] Palmo in diagonale → resta la direzione iniziata, senza alternarsi
-- [ ] Mano che si muove senza fermarsi prima → nessun tasto
-- [ ] Pollice su tenuto 3 s → `KEY_VOLUP` ripetuto, più veloce dopo 1,5 s
-- [ ] Pollice su, poi mano fuori inquadratura → il volume si ferma subito
-- [ ] Clic durante un video (YouTube, Netflix…) → `KEY_ENTER`, il video va in pausa
-- [ ] 🤟 per meno di 1,5 s → nessun tasto; per più di 1,5 s → `KEY_POWER`
-- [ ] Pugno 1 s → `KEY_HOME` una sola volta, anche tenendolo chiuso
-- [ ] Palmo chiuso e riaperto in fretta → `KEY_ENTER`, in entrambe le modalità
-- [ ] Seconda mano in vista → `Modalita' -> nav` nel log e overlay "Navigazione"
-- [ ] In Navigazione: mano sinistra verso sinistra → `KEY_LEFT`, mano destra
-      verso destra → `KEY_RIGHT`, una delle due in su/giù → `KEY_UP`/`KEY_DOWN`;
-      mani una verso l'altra → nessun tasto; pollice su → `KEY_ENTER`;
-      pollice verso sinistra → `KEY_RETURN` (non la Home, non un clic)
-- [ ] Palmo appena oltre il riquadro → frecce lente; lontano → frecce veloci
-- [ ] Togliendo la seconda mano → `Modalita' -> tv`
+Run `python -m tv_air_remote --dry-run` and check that the terminal shows the
+expected key:
 
-## Risoluzione problemi
+- [ ] One hand: palm still, then moved up → `KEY_VOLUP`; down → `KEY_VOLDOWN`
+- [ ] One hand: palm right → `KEY_CHUP`; left → `KEY_CHDOWN`
+- [ ] Palm held up → `KEY_VOLUP` repeated; back at the centre → it stops
+- [ ] Palm moved diagonally → the starting direction is kept, no alternating
+- [ ] A hand moving without stopping first → no key
+- [ ] Thumb up held for 3 s → `KEY_VOLUP` repeated, faster after 1.5 s
+- [ ] Click during a video (YouTube, Netflix…) → `KEY_ENTER`, the video pauses
+- [ ] 🤟 for less than 1.5 s → no key; for longer → `KEY_POWER`
+- [ ] Fist for 1 s → `KEY_HOME` once, even when kept closed
+- [ ] Palm closed and reopened quickly → `KEY_ENTER`, in both modes
+- [ ] Second hand in view → `Mode -> nav` in the log and "Navigation" on screen
+- [ ] Navigation: left hand to the left → `KEY_LEFT`, right hand to the right →
+      `KEY_RIGHT`, either hand up/down → `KEY_UP`/`KEY_DOWN`; hands towards each
+      other → no key; thumb pointing left → `KEY_RETURN` (not Home, not a click)
+- [ ] Palm just past the square → slow arrows; further out → fast arrows
+- [ ] Second hand removed → `Mode -> tv`
 
-| Problema | Soluzione |
+## Troubleshooting
+
+| Problem | Solution |
 |---|---|
-| Overlay "TV: non connessa" | Controlla IP e che PC e TV siano sulla stessa rete. Il programma riprova da solo. |
-| Overlay "accesso negato" | Riabilita il dispositivo (vedi *Primo collegamento*), poi riavvia. |
-| La TV non si accende con 🤟 | Serve `tv.mac` e l'accensione da rete attiva sulla TV. |
-| "Impossibile aprire la webcam" | Chiudi altre app che la usano, oppure prova `--camera 1`. |
-| "Non disponibile" mettendo in pausa un canale in diretta | Il timeshift Samsung richiede spesso una chiavetta USB collegata alla TV. Nelle app video la pausa col clic funziona. |
-| Modello non scaricabile | Scarica a mano l'URL indicato nel messaggio e salvalo in `models/gesture_recognizer.task`. |
+| "TV: not connected" on screen | Check the IP address and that the computer and the TV are on the same network. The program retries by itself. |
+| "access denied" on screen | Allow the device again (see *First connection*), then restart. |
+| The TV does not turn on with 🤟 | `tv.mac` must be set and Power On with Mobile enabled on the TV. |
+| "Cannot open the webcam" | Close other apps using it, or try `--camera 1`. |
+| Slow start on Windows | The webcam is opened with DirectShow; if it fails, the program falls back to the default backend, which can take 10–30 s. |
+| "Not available" when pausing a live channel | Samsung timeshift often needs a USB stick plugged into the TV. In video apps pausing with the click works. |
+| The left arrow rewinds a video by 10 s | That is what Samsung video apps do with the left arrow during playback, exactly as with the remote. |
+| The model cannot be downloaded | Download the URL shown in the message by hand and save it as `models/gesture_recognizer.task`. |
 
-## Sviluppo
+## How it works
+
+1. `camera.py` grabs mirrored frames from the webcam, so your left is the
+   left of the image.
+2. `recognizer.py` runs MediaPipe's Gesture Recognizer on up to two hands.
+3. `interpreter.py` turns the hands into keys: it picks the mode from the
+   number of hands, runs one palm joystick per hand (`joystick.py`) and detects
+   clicks, held gestures and the thumb pointing left.
+4. `tv.py` sends the keys to the TV in a background thread through
+   [samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api), reconnects
+   when the TV drops the connection and resends the key that failed.
+5. `overlay.py` draws the hands, the joysticks, the status and the command
+   legend, with texts from `i18n.py`.
+
+## Development
 
 ```bash
 pip install -e ".[dev]"
 pytest
 ```
 
-Struttura del pacchetto `tv_air_remote/`:
+The interpreter and the joystick are pure state machines that receive time
+from outside, so they are tested without a webcam or a TV.
 
-| File | Ruolo |
+| File | Role |
 |---|---|
-| `config.py` | configurazione e validazione |
-| `camera.py` | acquisizione dalla webcam |
-| `recognizer.py` | MediaPipe Gesture Recognizer |
-| `joystick.py` | palmo aperto come joystick (centro e 4 direzioni) |
-| `interpreter.py` | macchina a stati: gesture → tasti |
-| `tv.py` | collegamento alla TV, riconnessione, Wake-on-LAN |
-| `overlay.py` | informazioni a schermo |
-| `__main__.py` | avvio e ciclo principale |
+| `tv_air_remote/config.py` | configuration and validation |
+| `tv_air_remote/camera.py` | webcam capture |
+| `tv_air_remote/recognizer.py` | MediaPipe Gesture Recognizer |
+| `tv_air_remote/joystick.py` | open palm as a joystick, hand-shape checks |
+| `tv_air_remote/interpreter.py` | state machine: hands → keys |
+| `tv_air_remote/tv.py` | TV connection, reconnection, Wake-on-LAN |
+| `tv_air_remote/overlay.py` | on-screen information |
+| `tv_air_remote/i18n.py` | on-screen texts in English and Italian |
+| `tv_air_remote/__main__.py` | startup and main loop |
+| `scripts/tv_check.py` | TV connection check without a webcam |
+| `quick-tests.bat` | Windows menu of common runs |
 
-Design e piano: `docs/superpowers/specs/` e `docs/superpowers/plans/`.
+To add a language, add a block to `TEXTS` in `tv_air_remote/i18n.py` with the
+same keys as `en`; a test checks that no text is missing.
