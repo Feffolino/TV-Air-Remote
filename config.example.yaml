@@ -1,0 +1,71 @@
+# Copia questo file in config.yaml e modifica almeno tv.host.
+
+tv:
+  host: 192.168.1.50          # IP della TV (Impostazioni > Generale > Rete > Stato rete)
+  port: 8002                  # 8002 = WebSocket sicuro (TV dal 2016 in poi)
+  # mac: "aa:bb:cc:dd:ee:ff"  # per accendere la TV con Wake-on-LAN
+  token_file: .tv_token       # creato al primo collegamento autorizzato
+  name: TV Air Remote         # nome mostrato sulla TV
+
+camera:
+  index: 0
+  width: 640
+  height: 480
+  fps: 30
+
+# Valori predefiniti: cambiali solo se serve.
+thresholds:
+  min_score: 0.7          # confidenza minima della gesture
+  stable_frames: 5        # frame consecutivi per confermare una gesture
+  cooldown_ms: 800        # pausa dopo un comando singolo
+  release_ms: 500         # una gesture va lasciata per tanto prima di valere di nuovo
+  click_ms: 700           # palmo chiuso e riaperto entro tanto = clic (OK)
+  repeat_ms: 300          # ripetizione del volume
+  fast_repeat_ms: 150     # ripetizione veloce del volume
+  fast_after_ms: 1500     # dopo quanto il volume accelera
+  hand_lost_ms: 300       # mano assente oltre questo tempo = reset
+  palm_keep_ms: 1500      # una mano persa tiene il suo centro per tanto
+  nav_enter_ms: 400       # 2 mani per tanto = modalità Navigazione
+  nav_exit_ms: 1500       # 1 mano sola per tanto = di nuovo modalità TV
+  palm_arm_ms: 300        # palmo fermo per tanto = qui c'è il centro
+  palm_still_dist: 0.03   # "fermo" = palmo entro il 3% del frame
+  palm_zone: 0.08         # palmo oltre l'8% dal centro = comando in quella direzione
+  palm_idle: 0.05         # palmo entro il 5% dal centro = riposo
+  palm_smoothing: 0.5     # media della posizione: più basso = più stabile ma più lento
+  palm_slow_ms: 700       # ripetizione col palmo appena oltre la soglia...
+  palm_fast_ms: 150       # ...e col palmo lontano dal centro
+  palm_fast_dist: 0.20    # distanza dal centro a cui si arriva alla ripetizione veloce
+  repeat_gestures: [Thumb_Up, Thumb_Down]
+  hold_ms:
+    Closed_Fist: 1000
+    ILoveYou: 1500
+
+# Gesture: Thumb_Up, Thumb_Down, Thumb_Left, Victory, Pointing_Up, ILoveYou, Closed_Fist,
+# Open_Palm, PALM_UP, PALM_DOWN, PALM_LEFT, PALM_RIGHT (palmo spostato dal centro),
+# PALM_CLICK (palmo chiuso e riaperto in fretta).
+# Valore: un tasto Samsung (KEY_...) oppure PLAY_PAUSE (alterna KEY_PAUSE e KEY_PLAY).
+# Nelle app video OK (KEY_ENTER) fa già pausa/play: per questo il clic manda OK.
+# Modalità: tv con una mano in vista, nav con due mani.
+# Una modalità scritta qui sostituisce per intero quella predefinita.
+mapping:
+  tv:
+    PALM_UP: KEY_VOLUP
+    PALM_DOWN: KEY_VOLDOWN
+    PALM_LEFT: KEY_CHDOWN
+    PALM_RIGHT: KEY_CHUP
+    PALM_CLICK: KEY_ENTER
+    Thumb_Up: KEY_VOLUP
+    Thumb_Down: KEY_VOLDOWN
+    Closed_Fist: KEY_HOME
+    ILoveYou: KEY_POWER
+  nav:
+    PALM_UP: KEY_UP
+    PALM_DOWN: KEY_DOWN
+    PALM_LEFT: KEY_LEFT
+    PALM_RIGHT: KEY_RIGHT
+    PALM_CLICK: KEY_ENTER
+    Thumb_Up: KEY_ENTER
+    Victory: KEY_RETURN
+    Thumb_Left: KEY_RETURN
+    Thumb_Down: KEY_VOLDOWN
+    ILoveYou: KEY_POWER

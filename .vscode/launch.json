@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Gesture dry-run",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "tv_air_remote",
+            "args": ["--dry-run"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Avvio completo (TV)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "tv_air_remote",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Collegamento TV",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/tv_check.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Collegamento TV + KEY_MUTE",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/tv_check.py",
+            "args": ["--key", "KEY_MUTE"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        }
+    ]
+}
